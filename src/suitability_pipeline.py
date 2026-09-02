@@ -73,16 +73,21 @@ def classify_band(score: float) -> str:
     return "Low"
 
 
-def combine_scores(grid: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def combine_scores(grid: gpd.GeoDataFrame, weights: dict[str, float] | None = None) -> gpd.GeoDataFrame:
     """Weight and sum the sub-scores, apply the flood penalties and greenspace
     hard exclusion, and classify each cell into a suitability band.
 
     Flood Zone 3 and Flood Zone 2 are both penalties, not hard exclusions
     (see src/scoring.py); where a cell is flagged for both, only the
     stronger FZ3 penalty is applied, not both multiplied together.
+
+    `weights` overrides the module-level WEIGHTS (e.g. from the Streamlit
+    app's interactive sliders) - keys must match sub-score column names in
+    `grid`. Values need not sum to 1; the caller is expected to normalise.
     """
+    weights = weights if weights is not None else WEIGHTS
     grid = grid.copy()
-    weighted = sum(grid[column] * weight for column, weight in WEIGHTS.items())
+    weighted = sum(grid[column] * weight for column, weight in weights.items())
     grid["suitability_index"] = weighted
 
     fz3 = grid["flood_zone_3"]

@@ -151,11 +151,31 @@ writes the scored grid to `data/processed/suitability_grid_100m.gpkg`):
 python -m src.suitability_pipeline
 ```
 
+Launch the interactive web app (requires the pipeline to have been run at
+least once already):
+
+```bash
+streamlit run app/app.py
+```
+
+This opens a map of Hull coloured by suitability band, with:
+- sliders to reweight the three sub-scores live and see the Suitability
+  Index recombine in real time (the weights are always visible — never a
+  black box);
+- a band filter and toggleable context layers (Flood Zone 2/3, greenspace,
+  the major road network used for accessibility, the two known regeneration
+  sites used for the face-validity check);
+- click-to-inspect popups on every grid cell showing its full sub-score
+  breakdown;
+- a table of the current top-scoring cells.
+
 ## Status
 
 🚧 Work in progress. Current stage: all four sub-scores (ground stability,
 infill preference, accessibility, flood/greenspace exclusion) implemented
-and combined into a Suitability Index. Still to add: the Streamlit app.
+and combined into a Suitability Index, plus an interactive Streamlit app
+for exploring the map. Still to add: exported static outputs (PNG/HTML) in
+`outputs/`.
 
 ## Limitations
 
