@@ -3,6 +3,8 @@
 A reproducible, transparent decision-support tool for identifying
 regeneration-ready land in Hull, UK.
 
+![Hull suitability map](outputs/figures/suitability_map.png)
+
 ## Problem
 
 Hull City Council's [Council Plan 2024-2028](https://www.hull.gov.uk/) sets out
@@ -182,13 +184,35 @@ streamlit run app/app.py
 
 Then open http://localhost:8501 in a browser.
 
+Export static outputs (no server required — writes to `outputs/`):
+
+```bash
+python -m src.export_outputs
+```
+
+## Outputs
+
+`python -m src.export_outputs` (`src/export_outputs.py`) writes:
+
+- `outputs/figures/suitability_map.png` — the static choropleth shown at the
+  top of this README.
+- `outputs/figures/band_distribution.png` — a bar chart of cell counts per
+  suitability band.
+- `outputs/suitability_map.html` — a standalone interactive version of the
+  map (same styling as the Streamlit app's default view, including
+  click-to-inspect popups) that opens directly in a browser with no server
+  needed — useful for sharing the map with someone who just wants to look,
+  not run the app.
+
+Both the PNG and the HTML map are built from the same `src/mapping.py`
+module the Streamlit app uses, so all three stay visually consistent.
+
 ## Status
 
 🚧 Work in progress. Current stage: all four sub-scores (ground stability,
 infill preference, accessibility, flood/greenspace exclusion) implemented
-and combined into a Suitability Index, plus an interactive Streamlit app
-for exploring the map. Still to add: exported static outputs (PNG/HTML) in
-`outputs/`.
+and combined into a Suitability Index, an interactive Streamlit app for
+exploring the map, and static PNG/HTML exports in `outputs/`.
 
 ## Limitations
 
