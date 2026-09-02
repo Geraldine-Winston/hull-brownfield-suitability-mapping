@@ -184,6 +184,23 @@ streamlit run app/app.py
 
 Then open http://localhost:8501 in a browser.
 
+### Deploying to Streamlit Community Cloud
+
+- **Branch:** `main`
+- **Main file path:** `app/app.py`
+- **Python version:** pin this to **3.11** in the "Advanced settings" dialog
+  when you create the deployment (Community Cloud has no repo file for
+  this — `runtime.txt` is not read; to change it later you must delete and
+  redeploy the app). 3.11 has solid prebuilt wheels for geopandas/fiona/
+  rasterio; newer Python versions (3.13+) often don't yet, forcing a slow
+  and fragile GDAL source build.
+- `packages.txt` (repo root) installs `gdal-bin` and `libgdal-dev` as a
+  safety net in case any geospatial dependency still needs to compile
+  against the system GDAL rather than using a prebuilt wheel.
+- `data/processed/*.gpkg` are committed (not gitignored) so the app has its
+  input data on a fresh deploy, which only clones the repo rather than
+  running the pipeline.
+
 Export static outputs (no server required — writes to `outputs/`):
 
 ```bash
