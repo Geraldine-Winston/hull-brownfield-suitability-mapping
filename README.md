@@ -61,29 +61,37 @@ A multi-criteria decision analysis (MCDA), not a machine-learning model:
      Sequential/Exception Test and the city's tidal defences. The heavy
      penalty keeps flood exposure clearly reflected in the score without
      erasing most of the city from the map.
-   - **Accessibility** — distance to the road network. Not yet implemented;
-     `Roads_Hall1.shp` is available in `data/raw/` for this.
-4. Combine sub-scores into a single weighted Suitability Index (0–100).
-   Current provisional weights (`src/suitability_pipeline.py::WEIGHTS`,
-   applied before the flood penalty and greenspace exclusion): ground
-   stability 50%, infill preference 50%. These are equal only because
-   accessibility hasn't been added yet — weights will be rebalanced and
-   re-documented here once it is.
+   - **Accessibility** — linear distance decay from each cell's centroid to
+     the nearest *major* road (A Road, B Road or Primary Road, including
+     dual-carriageway variants; 100 at 0m, 0 at ≥800m). Ordinary local
+     streets are dense almost everywhere in a built-up city like Hull, so
+     distance to *any* road wouldn't differentiate cells — proximity to the
+     strategic road network is a more meaningful accessibility proxy for
+     larger-scale regeneration.
+4. Combine sub-scores into a single weighted Suitability Index (0–100)
+   (`src/suitability_pipeline.py::WEIGHTS`, applied before the flood penalty
+   and greenspace exclusion). All three sub-scores are weighted equally
+   (1/3 each) — a deliberate simplification for a demonstration project
+   rather than a claim that all three matter equally in reality. A proper
+   weighting exercise (e.g. AHP with input from planners/surveyors) would be
+   a natural next step beyond this project's scope.
 5. Classify each cell into a suitability band: Low (0–25) / Medium (25–50) /
    High (50–75) / Prime (75–100) / Excluded (hard exclusion).
 6. Sense-check results against known real regeneration sites. Using
    approximate landmark-level coordinates (not exact site boundaries — see
    caveat below): **East Bank Urban Village** scores in the Low band
-   (suitability index ≈ 12.5) rather than "Excluded", showing the flood
+   (suitability index ≈ 13.9) rather than "Excluded", showing the flood
    penalty approach works as intended for a site the model previously
-   erased entirely. **Albion Square** still lands in "Excluded" — but
-   because its approximate coordinate falls in a 100m cell that is 75%
-   covered by Queen's Gardens, a real public park immediately adjacent to
-   the site, not because of flood zoning. This is an honest limitation of
-   combining a coarse 100m grid with a single approximate landmark
-   coordinate rather than the site's actual boundary polygon, not a flaw in
-   the exclusion logic — the model is correctly detecting genuine parkland
-   in that cell.
+   erased entirely — its strong accessibility score (≈84, close to the
+   Wincolmlee/Sculcoates arterial roads) and infill preference (≈95) pull
+   the index up from what flood exposure alone would give it. **Albion
+   Square** still lands in "Excluded" — but because its approximate
+   coordinate falls in a 100m cell that is 75% covered by Queen's Gardens, a
+   real public park immediately adjacent to the site, not because of flood
+   zoning or accessibility. This is an honest limitation of combining a
+   coarse 100m grid with a single approximate landmark coordinate rather
+   than the site's actual boundary polygon, not a flaw in the exclusion
+   logic — the model is correctly detecting genuine parkland in that cell.
 
 ## Data
 
@@ -145,10 +153,9 @@ python -m src.suitability_pipeline
 
 ## Status
 
-🚧 Work in progress. Current stage: ground stability, infill preference and
-flood/greenspace exclusion sub-scores implemented and combined into a
-Suitability Index. Still to add: accessibility (road distance) sub-score and
-the Streamlit app.
+🚧 Work in progress. Current stage: all four sub-scores (ground stability,
+infill preference, accessibility, flood/greenspace exclusion) implemented
+and combined into a Suitability Index. Still to add: the Streamlit app.
 
 ## Limitations
 

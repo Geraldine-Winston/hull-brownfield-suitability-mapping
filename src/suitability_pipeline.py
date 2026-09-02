@@ -21,18 +21,22 @@ from src.grid import DEFAULT_CELL_SIZE_M, build_grid  # noqa: E402
 from src.scoring import (  # noqa: E402
     FLOOD_ZONE_2_PENALTY_FACTOR,
     FLOOD_ZONE_3_PENALTY_FACTOR,
+    accessibility_score,
     exclusion_mask,
     ground_stability_score,
     infill_preference_score,
 )
 
-# Provisional weights for the two sub-scores built so far. Ground stability
-# and infill preference are weighted equally for now; once the accessibility
-# (road-distance) sub-score is added these will be rebalanced and the
-# reasoning documented here and in the README.
+# All three sub-scores are weighted equally (1/3 each). This is a deliberate
+# simplification for a demonstration project rather than a claim that all
+# three genuinely matter the same amount - a defensible weighting exercise
+# (e.g. AHP with input from planners/surveyors) would be a natural next step
+# beyond this project's scope. Equal weights keep the index transparent and
+# easy to reason about without asserting false precision.
 WEIGHTS = {
-    "ground_stability": 0.5,
-    "infill_preference": 0.5,
+    "ground_stability": 1 / 3,
+    "infill_preference": 1 / 3,
+    "accessibility": 1 / 3,
 }
 
 # (lower bound inclusive, upper bound exclusive, label)
@@ -54,6 +58,7 @@ def load_layers() -> dict[str, gpd.GeoDataFrame]:
     return {
         "boundary": gpd.read_file(boundary_path),
         "buildings": gpd.read_file(RAW_DATA_DIR / "Building_Hull1.shp"),
+        "roads": gpd.read_file(RAW_DATA_DIR / "Roads_Hall1.shp"),
         "superficial_geology": gpd.read_file(RAW_DATA_DIR / "UK_625k_SUPERFICIAL_Geology_Polygons_Hull.shp"),
         "bedrock_geology": gpd.read_file(RAW_DATA_DIR / "625k_V5_BEDROCK_Geology_Polygons_Hull.shp"),
         "greenspace": gpd.read_file(RAW_DATA_DIR / "GB_GreenspaceSite_Hull.shp"),
@@ -98,6 +103,7 @@ def main() -> None:
     grid = build_grid(layers["boundary"])
     grid = ground_stability_score(grid, layers["superficial_geology"], layers["bedrock_geology"])
     grid = infill_preference_score(grid, layers["buildings"])
+    grid = accessibility_score(grid, layers["roads"])
     grid = exclusion_mask(grid, layers["greenspace"], layers["flood_zones"])
     grid = combine_scores(grid)
 
@@ -109,6 +115,7 @@ def main() -> None:
     print(grid["suitability_band"].value_counts())
     print(f"\nMean ground_stability:  {grid['ground_stability'].mean():.1f}")
     print(f"Mean infill_preference: {grid['infill_preference'].mean():.1f}")
+    print(f"Mean accessibility:     {grid['accessibility'].mean():.1f}")
     print(f"Cells excluded (greenspace): {grid['excluded'].sum()} ({grid['excluded'].mean():.1%})")
     print(f"Cells in Flood Zone 3:       {grid['flood_zone_3'].sum()} ({grid['flood_zone_3'].mean():.1%})")
     print(f"Cells in Flood Zone 2 only:  {(grid['flood_zone_2'] & ~grid['flood_zone_3']).sum()}")

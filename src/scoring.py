@@ -90,6 +90,42 @@ def infill_preference_score(grid: gpd.GeoDataFrame, buildings: gpd.GeoDataFrame)
     return grid
 
 
+# --- Accessibility -------------------------------------------------------------
+
+# Local streets are dense almost everywhere in a built-up city like Hull, so
+# distance to the nearest *local* road wouldn't meaningfully differentiate
+# cells - most would score near-perfect. Instead, accessibility is scored by
+# distance-decay to the nearest "major" road (A Road, B Road or Primary
+# Road, including their dual-carriageway variants) - a proxy for how well
+# connected a site is to the strategic road/public transport network, which
+# matters more for larger-scale housing/mixed-use regeneration than
+# proximity to any residential side street. Major roads are sparser than
+# local ones, so a longer decay distance is used than for infill preference.
+MAJOR_ROAD_KEYWORDS = ("A Road", "B Road", "Primary Road")
+ACCESS_MAX_DISTANCE_M = 800.0
+
+
+def accessibility_score(grid: gpd.GeoDataFrame, roads: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Add an `accessibility` column (0-100): higher for cells closer to the
+    major road network, linearly decaying to 0 by ACCESS_MAX_DISTANCE_M."""
+    grid = grid.copy()
+    is_major_road = roads["CLASSIFICA"].str.contains("|".join(MAJOR_ROAD_KEYWORDS), na=False)
+    major_roads = roads.loc[is_major_road]
+
+    centroids = gpd.GeoDataFrame(
+        {"cell_id": grid["cell_id"]}, geometry=grid.geometry.centroid, crs=grid.crs
+    )
+    nearest = gpd.sjoin_nearest(
+        centroids, major_roads[["geometry"]], distance_col="dist_to_major_road"
+    )
+    nearest = nearest.drop_duplicates(subset="cell_id").set_index("cell_id")["dist_to_major_road"]
+
+    distance = grid["cell_id"].map(nearest).fillna(ACCESS_MAX_DISTANCE_M)
+    score = 100.0 * (1.0 - distance / ACCESS_MAX_DISTANCE_M)
+    grid["accessibility"] = score.clip(lower=0.0, upper=100.0)
+    return grid
+
+
 # --- Exclusion mask ------------------------------------------------------------
 
 # A cell is hard-excluded if greenspace covers at least this share of its
