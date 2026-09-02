@@ -79,7 +79,7 @@ def build_map(
     show_layers: dict[str, bool],
     show_sites: bool,
 ) -> folium.Map:
-    m = folium.Map(location=HULL_CENTRE, zoom_start=12, tiles="CartoDB positron")
+    m = folium.Map(location=HULL_CENTRE, zoom_start=12, tiles="OpenStreetMap")
 
     folium.GeoJson(
         context["boundary"],
