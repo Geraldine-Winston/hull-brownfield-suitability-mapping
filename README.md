@@ -93,6 +93,27 @@ A multi-criteria decision analysis (MCDA), not a machine-learning model:
    than the site's actual boundary polygon, not a flaw in the exclusion
    logic — the model is correctly detecting genuine parkland in that cell.
 
+## The app
+
+`app/app.py` is a Streamlit web app for exploring the scored grid
+interactively — a map of Hull coloured by suitability band (grey =
+Excluded, red = Low, yellow = Medium, light green = High, dark green =
+Prime), with:
+
+- **Live weight sliders** for the three sub-scores (ground stability,
+  infill preference, accessibility) — the Suitability Index recombines in
+  real time as you move them, so the reasoning stays visible rather than
+  locked inside a black box;
+- **click-to-inspect popups** on every grid cell showing its full
+  sub-score breakdown (ground stability, infill preference, accessibility,
+  flood zone flags, index, band);
+- a **band filter** to isolate e.g. only Prime/High cells;
+- **toggleable context layers** — Flood Zone 2, Flood Zone 3, greenspace,
+  the major road network the accessibility score is based on, and markers
+  for the two known regeneration sites used in the face-validity check
+  (Albion Square, East Bank Urban Village);
+- a **top-scoring cells table** and band-count summary chart.
+
 ## Data
 
 All source layers live in `data/raw/` and are pre-clipped to Hull. See
@@ -152,22 +173,14 @@ python -m src.suitability_pipeline
 ```
 
 Launch the interactive web app (requires the pipeline to have been run at
-least once already):
+least once already, so `data/processed/suitability_grid_100m.gpkg` exists —
+see [The app](#the-app) above for what it does):
 
 ```bash
 streamlit run app/app.py
 ```
 
-This opens a map of Hull coloured by suitability band, with:
-- sliders to reweight the three sub-scores live and see the Suitability
-  Index recombine in real time (the weights are always visible — never a
-  black box);
-- a band filter and toggleable context layers (Flood Zone 2/3, greenspace,
-  the major road network used for accessibility, the two known regeneration
-  sites used for the face-validity check);
-- click-to-inspect popups on every grid cell showing its full sub-score
-  breakdown;
-- a table of the current top-scoring cells.
+Then open http://localhost:8501 in a browser.
 
 ## Status
 
