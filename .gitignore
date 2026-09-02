@@ -20,6 +20,10 @@ env/
 .DS_Store
 Thumbs.db
 
+# Office lock files
+~$*.doc*
+~$*.xls*
+
 # IDE
 .vscode/
 .idea/
