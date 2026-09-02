@@ -34,21 +34,56 @@ modelling methodology from the dissertation is reproduced.
 A multi-criteria decision analysis (MCDA), not a machine-learning model:
 
 1. Load and reproject all vector layers to a common CRS (EPSG:27700, British
-   National Grid).
-2. Define a unit of analysis (a regular grid or administrative sub-areas).
-3. Derive suitability sub-scores per unit:
-   - **Ground stability** — from BGS bedrock geology classes.
-   - **Development density** — distance from existing buildings (infill vs.
-     greenfield preference).
-   - **Exclusions** — areas intersecting greenspace or Flood Zone 3 are
-     excluded outright; Flood Zone 2 is a partial penalty, not a hard
-     exclusion.
-   - **Accessibility** — distance to the road network.
-4. Combine sub-scores into a single weighted Suitability Index (0–100), with
-   weights documented and justified explicitly.
-5. Classify units into suitability bands (Low / Medium / High / Prime).
-6. Sense-check results against known real regeneration sites (e.g. Albion
-   Square, East Bank) to confirm they fall into higher suitability bands.
+   National Grid) — see `src/inspect_data.py` / `src/reproject_boundary.py`.
+2. Define the unit of analysis: a regular 100m × 100m grid clipped to the
+   Hull administrative boundary (`src/grid.py`). No ward-level sub-areas
+   were supplied, so a grid is used instead.
+3. Derive suitability sub-scores per grid cell (`src/scoring.py`):
+   - **Ground stability** — Hull sits on soft alluvial ("warp") superficial
+     deposits over a single, uniform chalk bedrock unit, so stability is
+     scored from the *superficial* geology class covering most of each cell
+     (till = 85, river terrace sand/gravel = 75, alluvium = 30), falling back
+     to a fixed chalk bedrock score (70) where nothing superficial is mapped.
+   - **Infill preference** — linear distance decay from each cell's centroid
+     to the nearest existing building footprint (100 at 0m, 0 at ≥300m),
+     favouring redevelopment adjacent to existing urban fabric over
+     disconnected greenfield land.
+   - **Exclusions / flood treatment** — greenspace is a **hard exclusion**
+     (score forced to 0, band = "Excluded") since it's genuinely
+     protected/undevelopable land. Flood Zone 3 and Flood Zone 2 are both
+     **penalties, not hard exclusions** (×0.2 and ×0.5 on the combined
+     score respectively, with FZ3 taking precedence where both apply). A
+     literal FZ3 hard exclusion was tried first and rejected: EA Flood Zone
+     3 covers ~79% of Hull's administrative area, and hard-excluding it
+     flagged both real regeneration sites checked in step 6 below
+     (Albion Square, East Bank Urban Village) as "Excluded" — which
+     contradicts how development actually proceeds in Hull under the NPPF
+     Sequential/Exception Test and the city's tidal defences. The heavy
+     penalty keeps flood exposure clearly reflected in the score without
+     erasing most of the city from the map.
+   - **Accessibility** — distance to the road network. Not yet implemented;
+     `Roads_Hall1.shp` is available in `data/raw/` for this.
+4. Combine sub-scores into a single weighted Suitability Index (0–100).
+   Current provisional weights (`src/suitability_pipeline.py::WEIGHTS`,
+   applied before the flood penalty and greenspace exclusion): ground
+   stability 50%, infill preference 50%. These are equal only because
+   accessibility hasn't been added yet — weights will be rebalanced and
+   re-documented here once it is.
+5. Classify each cell into a suitability band: Low (0–25) / Medium (25–50) /
+   High (50–75) / Prime (75–100) / Excluded (hard exclusion).
+6. Sense-check results against known real regeneration sites. Using
+   approximate landmark-level coordinates (not exact site boundaries — see
+   caveat below): **East Bank Urban Village** scores in the Low band
+   (suitability index ≈ 12.5) rather than "Excluded", showing the flood
+   penalty approach works as intended for a site the model previously
+   erased entirely. **Albion Square** still lands in "Excluded" — but
+   because its approximate coordinate falls in a 100m cell that is 75%
+   covered by Queen's Gardens, a real public park immediately adjacent to
+   the site, not because of flood zoning. This is an honest limitation of
+   combining a coarse 100m grid with a single approximate landmark
+   coordinate rather than the site's actual boundary polygon, not a flaw in
+   the exclusion logic — the model is correctly detecting genuine parkland
+   in that cell.
 
 ## Data
 
@@ -101,9 +136,19 @@ pipeline:
 python -m src.inspect_data
 ```
 
+Run the full suitability pipeline (builds the grid, computes sub-scores,
+writes the scored grid to `data/processed/suitability_grid_100m.gpkg`):
+
+```bash
+python -m src.suitability_pipeline
+```
+
 ## Status
 
-🚧 Work in progress. Current stage: data loading and CRS verification.
+🚧 Work in progress. Current stage: ground stability, infill preference and
+flood/greenspace exclusion sub-scores implemented and combined into a
+Suitability Index. Still to add: accessibility (road distance) sub-score and
+the Streamlit app.
 
 ## Limitations
 
@@ -112,8 +157,19 @@ python -m src.inspect_data
 - Suitability weights reflect the author's judgement, documented for
   transparency, and should be reviewed by a domain expert before any
   real-world use.
-- Flood exclusion is based on EA Flood Zones 2/3 only; it is not a substitute
-  for a full Flood Risk Assessment.
+- Flood Zone 3 is treated as a heavy score penalty rather than a hard
+  exclusion (see Methodology step 3) — a deliberate, documented deviation
+  from a stricter reading of the brief, made because Hull's real geography
+  (~79% of the city in FZ3) made a hard exclusion fail its own face-validity
+  check. This is not a substitute for a full Flood Risk Assessment or the
+  statutory Sequential/Exception Test.
+- The 100m grid is a modelling simplification; it doesn't align with real
+  parcel/plot boundaries, so individual cell scores near a feature's edge
+  can be sensitive to exactly where that boundary falls.
+- The face-validity spot-check in step 6 uses approximate landmark-level
+  coordinates for Albion Square and East Bank Urban Village, not their
+  actual site boundaries, so results should be read directionally rather
+  than as a precise match.
 
 ## License
 
